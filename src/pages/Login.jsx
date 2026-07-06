@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTranslation } from 'react-i18next';
-import { SunIcon, MoonIcon, EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { SunIcon, MoonIcon, EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import loginPhoto from '../assets/images/login_photo.png';
 
@@ -94,11 +94,21 @@ const Login = () => {
 
         {/* Top Bar */}
         <div className="flex justify-between items-center p-4">
-          <div className="flex items-center gap-2 lg:hidden">
-            <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-              <span className="text-sm">🏥</span>
-            </div>
-            <span className="font-bold text-gray-800 dark:text-white text-xs">AI EHR</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/')}
+              className="p-1.5 rounded-lg bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-1.5"
+              aria-label={t('common.back_to_home')}
+            >
+              <ArrowLeftIcon className={`w-4 h-4 ${isRTL ? 'rotate-180' : ''}`} />
+              <span className="text-xs font-medium hidden sm:inline">{t('common.back_to_home').replace('← ', '')}</span>
+            </button>
+            <Link to="/" className="flex items-center gap-2 group">
+              <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <span className="text-sm">🏥</span>
+              </div>
+              <span className="font-bold text-gray-800 dark:text-white text-xs">AI EHR</span>
+            </Link>
           </div>
           <div className={`flex gap-1.5 ${isRTL ? 'mr-auto' : 'ml-auto'}`}>
             <button onClick={toggleLanguage}

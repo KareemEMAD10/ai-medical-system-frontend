@@ -14,7 +14,8 @@ import {
   UsersIcon, UserGroupIcon, CalendarIcon,
   BuildingOfficeIcon, GlobeAltIcon,
   ChevronRightIcon, StarIcon, AcademicCapIcon,
-  PhoneIcon, EnvelopeIcon, MapPinIcon
+  PhoneIcon, EnvelopeIcon, MapPinIcon,
+  Bars3Icon, XMarkIcon
 } from '@heroicons/react/24/outline';
 import logo from '../assets/logo/Ai_EHR.png';
 
@@ -45,6 +46,8 @@ const LandingPage = () => {
     appointments: 0
   });
   const [activeSection, setActiveSection] = useState('home');
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // جلب إحصائيات سريعة
@@ -66,6 +69,58 @@ const LandingPage = () => {
     };
     fetchStats();
   }, []);
+
+  // ====== Scroll listener for navbar background ======
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // ====== IntersectionObserver for active section ======
+  useEffect(() => {
+    const sections = document.querySelectorAll('section[id]');
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      { rootMargin: '-40% 0px -55% 0px' }
+    );
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, []);
+
+  // ====== Close mobile menu on desktop resize ======
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) setMobileMenuOpen(false);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // ====== Prevent body scroll when mobile menu open ======
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.documentElement.style.overflow = '';
+    }
+    return () => { document.documentElement.style.overflow = ''; };
+  }, [mobileMenuOpen]);
+
+  const navItems = [
+    { id: 'home', key: 'landing.home' },
+    { id: 'features', key: 'landing.features' },
+    { id: 'stats', key: 'landing.stats' },
+    { id: 'testimonials', key: 'landing.testimonials' },
+    { id: 'contact', key: 'landing.contact' },
+  ];
 
   // ====== لو المستخدم مسجل دخول، حوله للـ Dashboard ======
   useEffect(() => {
@@ -96,67 +151,184 @@ const LandingPage = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900" dir={isRTL ? 'rtl' : 'ltr'}>
       
       {/* ===== NAVBAR ===== */}
-      <nav className="sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 shadow-sm">
+      <nav className={`sticky top-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? 'bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg shadow-sm border-b border-gray-200/50 dark:border-gray-700/50'
+          : 'bg-transparent'
+      }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
+          <div className="flex justify-between items-center h-16 lg:h-20">
             
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-3 group">
-              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                <img src={logo} alt="AI EHR" className="w-8 h-8 object-contain" />
+            <Link to="/" className="flex items-center gap-2 lg:gap-3 group shrink-0">
+              <div className="w-9 h-9 lg:w-12 lg:h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl lg:rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                <img src={logo} alt="AI EHR" className="w-6 h-6 lg:w-8 lg:h-8 object-contain" />
               </div>
               <div>
-                <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                <span className="text-base lg:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                   {t('app.name')}
                 </span>
-                <p className="text-[10px] text-gray-400 dark:text-gray-500 -mt-0.5 font-medium tracking-wider">
+                <p className="text-[8px] lg:text-[10px] text-gray-400 dark:text-gray-500 -mt-0.5 font-medium tracking-wider hidden sm:block">
                   {t('app.tagline')}
                 </p>
               </div>
             </Link>
 
-            {/* Nav Links - Desktop */}
-            <div className="hidden md:flex items-center gap-6 text-sm font-medium">
-              <button onClick={() => scrollToSection('home')} className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                {t('landing.home')}
-              </button>
-              <button onClick={() => scrollToSection('features')} className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                {t('landing.features')}
-              </button>
-              <button onClick={() => scrollToSection('stats')} className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                {t('landing.stats')}
-              </button>
-              <button onClick={() => scrollToSection('testimonials')} className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                {t('landing.testimonials')}
-              </button>
-              <button onClick={() => scrollToSection('contact')} className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                {t('landing.contact')}
-              </button>
+            {/* Desktop Nav Links (lg+) */}
+            <div className="hidden lg:flex items-center gap-1">
+              {navItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => scrollToSection(item.id)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeSection === item.id
+                      ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                  }`}
+                  aria-label={t(item.key)}
+                >
+                  {t(item.key)}
+                </button>
+              ))}
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-3">
+            {/* Desktop Actions (lg+) */}
+            <div className="hidden lg:flex items-center gap-2">
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                aria-label={t('common.toggle_theme')}
               >
                 {theme === 'light' ? '🌙' : '☀️'}
               </button>
               <button
                 onClick={toggleLanguage}
-                className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-xs font-semibold"
+                className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                aria-label={t('common.toggle_language')}
               >
                 {isRTL ? t('auth.language_switch_en') : t('auth.language_switch_ar')}
               </button>
               
               <Link to="/login" 
-                className="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-sm font-semibold flex items-center gap-2">
+                className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-sm font-semibold flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                aria-label={t('landing.login')}>
                 <UserIcon className="w-4 h-4" />
                 {t('landing.login')}
               </Link>
               <Link to="/register" 
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 transition-all text-sm font-semibold shadow-lg shadow-indigo-500/25 flex items-center gap-2">
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 transition-all text-sm font-semibold shadow-lg shadow-indigo-500/25 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                aria-label={t('landing.register')}>
                 <UserPlusIcon className="w-4 h-4" />
+                {t('landing.register')}
+              </Link>
+            </div>
+
+            {/* Mobile Actions (below lg) */}
+            <div className="flex lg:hidden items-center gap-1.5">
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                aria-label={t('common.toggle_theme')}
+              >
+                {theme === 'light' ? '🌙' : '☀️'}
+              </button>
+              <button
+                onClick={toggleLanguage}
+                className="px-2 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-[10px] font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                aria-label={t('common.toggle_language')}
+              >
+                {isRTL ? 'EN' : 'AR'}
+              </button>
+              <button
+                onClick={() => setMobileMenuOpen(true)}
+                className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                aria-label={t('common.open_menu')}
+                aria-expanded={mobileMenuOpen}
+              >
+                <Bars3Icon className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Drawer */}
+        <div
+          className={`fixed inset-0 z-50 lg:hidden transition-opacity duration-300 ${
+            mobileMenuOpen ? 'pointer-events-auto' : 'pointer-events-none'
+          }`}
+        >
+          {/* Backdrop */}
+          <div
+            className={`fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
+              mobileMenuOpen ? 'opacity-100' : 'opacity-0'
+            }`}
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Drawer Panel */}
+          <div
+            className={`fixed top-0 bottom-0 w-72 max-w-[85vw] bg-white dark:bg-gray-900 shadow-2xl transition-transform duration-300 ease-out overflow-y-auto ${
+              isRTL ? 'left-0' : 'right-0'
+            } ${
+              mobileMenuOpen ? 'translate-x-0' : (isRTL ? '-translate-x-full' : 'translate-x-full')
+            }`}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('common.navigation_menu')}
+          >
+            {/* Close Button */}
+            <div className="flex justify-end p-4">
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                aria-label={t('common.close_menu')}
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Nav Links */}
+            <div className="px-4 space-y-1">
+              {navItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    scrollToSection(item.id);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                    activeSection === item.id
+                      ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                  }`}
+                >
+                  {t(item.key)}
+                </button>
+              ))}
+            </div>
+
+            {/* Divider */}
+            <div className="my-4 mx-4 border-t border-gray-200 dark:border-gray-700" />
+
+            {/* Action Buttons */}
+            <div className="px-4 pb-8 space-y-2">
+              <Link
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                aria-label={t('landing.login')}
+              >
+                <UserIcon className="w-5 h-5" />
+                {t('landing.login')}
+              </Link>
+              <Link
+                to="/register"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 transition-all text-sm font-semibold shadow-lg shadow-indigo-500/25 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                aria-label={t('landing.register')}
+              >
+                <UserPlusIcon className="w-5 h-5" />
                 {t('landing.register')}
               </Link>
             </div>

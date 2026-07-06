@@ -571,7 +571,8 @@
     "pay_fee": "Pay Fee",
     "loading_data": "Loading data...",
     "no_data_available": "No available data",
-    "available_here": "Will be shown here"
+    "available_here": "Will be shown here",
+    "back_to_home": "← Back to Home"
   },
   "errors": {
     "required": "This field is required",

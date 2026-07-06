@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { 
   SunIcon, MoonIcon, UserIcon, EnvelopeIcon, LockClosedIcon, 
   BuildingOfficeIcon, AcademicCapIcon, EyeIcon, EyeSlashIcon,
-  IdentificationIcon, PhoneIcon, CameraIcon
+  IdentificationIcon, PhoneIcon, CameraIcon, ArrowLeftIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
@@ -140,7 +140,15 @@ const Register = () => {
 
         {/* Top Bar */}
         <div className="flex justify-between items-center p-3 flex-shrink-0">
-          <div className="flex items-center gap-1.5 lg:hidden">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => navigate('/')}
+              className="p-1 rounded-lg bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-1"
+              aria-label={t('common.back_to_home')}
+            >
+              <ArrowLeftIcon className={`w-3.5 h-3.5 ${isRTL ? 'rotate-180' : ''}`} />
+              <span className="text-[10px] font-medium hidden sm:inline">{t('common.back_to_home').replace('← ', '')}</span>
+            </button>
             <div className={`w-6 h-6 rounded ${s.ib} flex items-center justify-center`}>
               <span className="text-xs">{sel?.icon}</span>
             </div>

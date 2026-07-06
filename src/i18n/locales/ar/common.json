@@ -523,7 +523,8 @@
     "pay_fee": "رسوم الخدمة",
     "loading_data": "جاري تحميل البيانات...",
     "no_data_available": "لا توجد بيانات متاحة",
-    "available_here": "سيظهر هنا"
+    "available_here": "سيظهر هنا",
+    "back_to_home": "← الرجوع للرئيسية"
   },
   "errors": {
     "required": "هذا الحقل مطلوب",
