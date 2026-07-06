@@ -92,7 +92,7 @@ const LabPage = () => {
   const fetchTestFiles = async (testId) => {
     try {
       const response = await api.get(`/lab/requests/${testId}/files`);
-      setTestFiles((response.data || []).map(file => ({ ...file, type: file.filename?.endsWith('.pdf') ? 'pdf' : 'image', url: `http://localhost:8000/uploads/lab/${testId}/${file.filename}` })));
+      setTestFiles((response.data || []).map(file => ({ ...file, type: file.filename?.endsWith('.pdf') ? 'pdf' : 'image', url: `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/uploads/lab/${testId}/${file.filename}` })));
     } catch (error) { setTestFiles([]); }
   };
 

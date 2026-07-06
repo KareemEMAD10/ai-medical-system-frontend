@@ -81,7 +81,7 @@ const LabTechDashboard = () => {
       setTestFiles((response.data || []).map(file => ({
         ...file,
         type: file.filename?.endsWith('.pdf') ? 'pdf' : 'image',
-        url: `http://localhost:8000/uploads/lab/${testId}/${file.filename}`
+        url: `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/uploads/lab/${testId}/${file.filename}`
       })));
     } catch (error) {
       setTestFiles([]);

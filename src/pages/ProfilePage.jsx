@@ -77,7 +77,7 @@ const ProfilePage = () => {
         } else if (user.profile_picture.startsWith('http')) {
           setProfileImage(user.profile_picture);
         } else {
-          setProfileImage(`http://localhost:8000${user.profile_picture}`);
+          setProfileImage(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${user.profile_picture}`);
         }
       } else {
         setProfileImage(null);
@@ -147,7 +147,7 @@ const ProfilePage = () => {
         } else if (response.data.profile_picture.startsWith('http')) {
           setProfileImage(response.data.profile_picture);
         } else {
-          setProfileImage(`http://localhost:8000${response.data.profile_picture}`);
+          setProfileImage(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${response.data.profile_picture}`);
         }
       }
       

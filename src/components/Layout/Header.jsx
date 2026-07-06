@@ -21,7 +21,7 @@ const Header = ({ toggleSidebar, onNotificationClick, unreadCount }) => {
       } 
       // لو الصورة مسار نسبي
       else {
-        setProfileImage(`http://localhost:8000${user.profile_picture}`);
+        setProfileImage(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${user.profile_picture}`);
       }
     } else {
       setProfileImage(null);

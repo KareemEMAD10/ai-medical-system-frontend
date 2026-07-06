@@ -1044,7 +1044,7 @@ const AIReviewsPage = () => {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {previewSourceFiles.map((file, idx) => {
                           const isPDF = file.filename?.endsWith('.pdf') || file.type === 'pdf';
-                          const fileUrl = file.url || `http://localhost:8000${file.url}`;
+                          const fileUrl = file.url || `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${file.url}`;
                           
                           return (
                             <div key={idx} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden hover:shadow-md transition-all group">
@@ -1283,7 +1283,7 @@ const AIReviewsPage = () => {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                           {sourceFiles.map((file, idx) => {
                             const isPDF = file.filename?.endsWith('.pdf') || file.type === 'pdf';
-                            const fileUrl = file.url || `http://localhost:8000${file.url}`;
+                            const fileUrl = file.url || `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${file.url}`;
                             
                             return (
                               <div key={idx} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden hover:shadow-md transition-all group">

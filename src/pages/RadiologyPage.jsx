@@ -77,7 +77,7 @@ const RadiologyPage = () => {
   const fetchScanImages = async (scanId) => {
     try {
       const response = await api.get(`/radiology/requests/${scanId}/images`);
-      const baseURL = 'http://localhost:8000';
+      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       setScanImages((response.data || []).map(file => ({ ...file, type: file.filename?.endsWith('.pdf') ? 'pdf' : 'image', url: `${baseURL}/files/radiology/${scanId}/${file.filename}` })));
     } catch (error) { setScanImages([]); }
   };
