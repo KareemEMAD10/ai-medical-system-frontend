@@ -1,0 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  body {
+    @apply font-cairo bg-gray-50 text-gray-900 dark:bg-dark-200 dark:text-gray-100;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 640px) {
+    body {
+      font-size: 14px;
+    }
+  }
+
+  [dir="rtl"] {
+    text-align: right;
+  }
+
+  [dir="ltr"] {
+    text-align: left;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary-500 hover:bg-primary-600 text-white font-semibold py-2.5 px-5 rounded-xl transition-all duration-200 transform hover:scale-105 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-200 hover:bg-gray-300 dark:bg-dark-100 dark:hover:bg-dark-100/80 text-gray-800 dark:text-gray-200 font-semibold py-2.5 px-5 rounded-xl transition-all duration-200;
+  }
+  
+  .btn-danger {
+    @apply bg-accent-500 hover:bg-accent-600 text-white font-semibold py-2.5 px-5 rounded-xl transition-all duration-200;
+  }
+  
+  .card {
+    @apply bg-white dark:bg-dark-100 rounded-xl shadow-md p-4 sm:p-6 transition-all duration-300 hover:shadow-lg;
+  }
+  
+  .input {
+    @apply w-full px-4 py-2.5 border border-gray-300 dark:border-dark-100 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-dark-200 dark:text-white transition-all outline-none;
+  }
+  
+  .label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5;
+  }
+  
+  .sidebar-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-600 transition-all duration-200;
+  }
+  
+  .sidebar-item-active {
+    @apply bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400;
+  }
+}
+
+@layer utilities {
+  .text-responsive {
+    @apply text-sm sm:text-base md:text-lg;
+  }
+  
+  .heading-responsive {
+    @apply text-xl sm:text-2xl md:text-3xl font-bold;
+  }
+  
+  .padding-responsive {
+    @apply p-3 sm:p-4 md:p-6;
+  }
+}

@@ -1,0 +1,810 @@
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import Layout from '../components/Layout/Layout';
+import api from '../services/api';
+import toast from 'react-hot-toast';
+import { BeakerIcon, PlusIcon, XMarkIcon, SparklesIcon, EyeIcon, PhotoIcon, CurrencyDollarIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+
+const LabPage = () => {
+  const { user } = useAuth();
+  const [tests, setTests] = useState([]);
+  const [patients, setPatients] = useState([]);
+  const [labTechs, setLabTechs] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState('');
+  const [selectedTest, setSelectedTest] = useState(null);
+  const [resultText, setResultText] = useState('');
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [testNames, setTestNames] = useState([]);
+  const [testFiles, setTestFiles] = useState([]);
+  const [requestData, setRequestData] = useState({
+    patient_id: '',
+    lab_tech_id: '',
+    test_type: '',
+    test_name: '',
+    description: '',
+    amount: 0
+  });
+
+  const [testTypes, setTestTypes] = useState([]);
+
+  // قائمة بأسماء التحاليل الشائعة
+  const commonTestNames = [
+    "صورة دم كاملة (CBC)",
+    "هيموجلوبين (Hb)",
+    "كرياتينين (Creatinine)",
+    "يوريا (Urea)",
+    "سكر صائم (FBS)",
+    "سكر تراكمي (HbA1c)",
+    "كوليسترول (Cholesterol)",
+    "دهون ثلاثية (Triglycerides)",
+    "T3",
+    "T4",
+    "TSH",
+    "فيتامين د (Vitamin D)",
+    "فيريتين (Ferritin)",
+    "حديد (Iron)",
+    "تحليل بول كامل (Urinalysis)",
+    "تحليل براز (Stool Analysis)",
+    "إنزيمات الكبد (ALT, AST)",
+    "بروتين سي التفاعلي (CRP)"
+  ];
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      // جلب طلبات التحاليل
+      const testsRes = await api.get('/lab/requests').catch(err => {
+        console.error('Tests error:', err);
+        return { data: [] };
+      });
+      
+      // جلب المرضى حسب دور المستخدم
+      let patientsList = [];
+      if (user?.role === 'doctor') {
+        const patientsRes = await api.get('/doctors/my-patients').catch(err => {
+          console.error('Patients error:', err);
+          return { data: [] };
+        });
+        patientsList = patientsRes.data || [];
+      } else {
+        const patientsRes = await api.get('/patients').catch(err => {
+          console.error('Patients error:', err);
+          return { data: [] };
+        });
+        patientsList = (patientsRes.data || []).filter(p => p.role === 'patient');
+      }
+      
+      // جلب أنواع التحاليل
+      const typesRes = await api.get('/lab/test-types').catch(err => {
+        console.error('Test types error:', err);
+        return { data: [] };
+      });
+      
+      // جلب فنيي التحاليل
+      const labTechsRes = await api.get('/users/by-role/lab_tech').catch(err => {
+        console.error('Lab techs error:', err);
+        return { data: [] };
+      });
+      
+      console.log('Patients loaded:', patientsList);
+      
+      const testsWithNames = (testsRes.data || []).map(test => {
+        const patient = patientsList.find(p => p.id === test.patient_id);
+        return {
+          ...test,
+          patient_name: patient?.username || test.patient_name || 'مريض',
+          doctor_name: test.doctor_name || 'طبيب'
+        };
+      });
+      
+      setTests(testsWithNames);
+      setPatients(patientsList);
+      setTestTypes(typesRes.data || []);
+      setLabTechs(labTechsRes.data || []);
+      setTestNames(commonTestNames);
+    } catch (error) {
+      console.error('Fetch error:', error);
+      toast.error('حدث خطأ في تحميل البيانات');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // جلب ملفات التحليل
+  const fetchTestFiles = async (testId) => {
+    try {
+      const response = await api.get(`/lab/requests/${testId}/files`);
+      const files = (response.data || []).map(file => ({
+        ...file,
+        type: file.filename?.endsWith('.pdf') ? 'pdf' : 'image',
+        url: `http://localhost:8000/uploads/lab/${testId}/${file.filename}`
+      }));
+      setTestFiles(files);
+    } catch (error) {
+      console.error('Error fetching files:', error);
+      setTestFiles([]);
+    }
+  };
+
+  const getAIAnalysis = async (test) => {
+    setSelectedTest(test);
+    setShowAIModal(true);
+    setAiAnalysis('جاري التحليل...');
+    
+    try {
+      const response = await api.post('/ai/analyze-lab', {
+        test_type: test.test_type,
+        test_name: test.test_name,
+        description: test.description,
+        result: test.result
+      });
+      setAiAnalysis(response.data.analysis || response.data.result || 'تم تحليل التحليل بواسطة الذكاء الاصطناعي');
+      toast.success('تم تحليل التحليل بواسطة الذكاء الاصطناعي');
+    } catch (error) {
+      console.error('AI error:', error);
+      setAiAnalysis('عذراً، حدث خطأ في تحليل التحليل. يرجى المحاولة مرة أخرى.');
+      toast.error('فشل في تحليل التحليل');
+    }
+  };
+
+  const handlePayment = async (test) => {
+    setSelectedTest(test);
+    setPaymentMethod('cash');
+    setShowPaymentModal(true);
+  };
+
+  const processPayment = async () => {
+    if (!selectedTest) return;
+    
+    try {
+      await api.post('/lab/payments', {
+        test_id: selectedTest.id,
+        amount: selectedTest.amount || 0,
+        payment_method: paymentMethod,
+        patient_id: user?.id
+      });
+      
+      toast.success(`تم الدفع بنجاح بقيمة ${selectedTest.amount || 0} ج.م`);
+      setShowPaymentModal(false);
+      setSelectedTest(null);
+      fetchData();
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast.error(error.response?.data?.detail || 'فشل في معالجة الدفع');
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!requestData.patient_id || !requestData.lab_tech_id || !requestData.test_type || !requestData.test_name) {
+      toast.error('يرجى إكمال جميع البيانات');
+      return;
+    }
+    try {
+      await api.post('/lab/requests', requestData);
+      toast.success('تم إرسال طلب التحليل بنجاح');
+      setShowModal(false);
+      setRequestData({ patient_id: '', lab_tech_id: '', test_type: '', test_name: '', description: '', amount: 0 });
+      fetchData();
+    } catch (error) {
+      console.error('Submit error:', error);
+      toast.error(error.response?.data?.detail || 'فشل الإرسال');
+    }
+  };
+
+  const handleCompleteTest = async () => {
+    if (!resultText) {
+      toast.error('يرجى إدخال نتيجة التحليل');
+      return;
+    }
+    if (!selectedTest || !selectedTest.id) {
+      toast.error('خطأ: لم يتم تحديد التحليل');
+      return;
+    }
+    try {
+      await api.put(`/lab/requests/${selectedTest.id}/complete`, { result: resultText });
+      toast.success('تم إضافة نتيجة التحليل بنجاح');
+      setShowResultModal(false);
+      setSelectedTest(null);
+      setResultText('');
+      fetchData();
+    } catch (error) {
+      console.error('Complete error:', error);
+      toast.error(error.response?.data?.detail || 'فشل في إضافة النتيجة');
+    }
+  };
+
+  const handleSetPrice = async () => {
+    if (!selectedTest || selectedTest.amount <= 0) {
+      toast.error('يرجى إدخال سعر صحيح');
+      return;
+    }
+    try {
+      await api.put(`/lab/requests/${selectedTest.id}/set-price`, {
+        amount: selectedTest.amount
+      });
+      toast.success('تم تحديد سعر التحليل بنجاح');
+      setShowPriceModal(false);
+      setSelectedTest(null);
+      fetchData();
+    } catch (error) {
+      console.error('Price error:', error);
+      toast.error('فشل في تحديد السعر');
+    }
+  };
+
+  // رفع ملفات التحليل
+  const handleUploadFiles = async (test) => {
+    setSelectedTest(test);
+    setUploadedFiles([]);
+    await fetchTestFiles(test.id);
+    setShowUploadModal(true);
+  };
+
+  const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    
+    if (!selectedTest || !selectedTest.id) {
+      toast.error('خطأ: لم يتم تحديد التحليل');
+      return;
+    }
+    
+    const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "image/gif", "image/webp", "application/pdf"];
+    const invalidFiles = files.filter(file => !allowedTypes.includes(file.type));
+    
+    if (invalidFiles.length > 0) {
+      toast.error(`الملفات التالية غير مدعومة: ${invalidFiles.map(f => f.name).join(", ")}. يسمح فقط بالصور و PDF`);
+      return;
+    }
+    
+    const formData = new FormData();
+    files.forEach(file => { formData.append("files", file); });
+    formData.append("test_id", selectedTest.id);
+    
+    try {
+      const response = await api.post("/lab/upload-files", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      toast.success(`تم رفع ${files.length} ملف بنجاح`);
+      await fetchTestFiles(selectedTest.id);
+      setUploadedFiles([...uploadedFiles, ...(response.data.files || [])]);
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("فشل في رفع الملفات");
+    }
+  };
+
+  const deleteFile = async (fileId) => {
+    if (!selectedTest || !selectedTest.id) {
+      toast.error('خطأ: لم يتم تحديد التحليل');
+      return;
+    }
+    try {
+      await api.delete(`/lab/files/${selectedTest.id}/${fileId}`);
+      toast.success('تم حذف الملف بنجاح');
+      await fetchTestFiles(selectedTest.id);
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error('فشل في حذف الملف');
+    }
+  };
+
+  const viewTestDetails = async (test) => {
+    setSelectedTest(test);
+    await fetchTestFiles(test.id);
+    setShowDetailsModal(true);
+  };
+
+  useEffect(() => { 
+    fetchData(); 
+  }, [user?.role]);
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex justify-center py-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+        </div>
+      </Layout>
+    );
+  }
+
+  const getStatusBadge = (test) => {
+    if (test.status === 'completed') {
+      return <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">✓ مكتمل</span>;
+    }
+    if (test.status === 'paid') {
+      return <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">💰 تم الدفع</span>;
+    }
+    if (test.status === 'price_set') {
+      return <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">💰 تم التسعير - في انتظار الدفع</span>;
+    }
+    return <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">⏳ قيد الانتظار</span>;
+  };
+
+  const filteredTests = (() => {
+    if (!tests) return [];
+    if (user?.role === 'lab_tech') {
+      return tests.filter(t => t.status === 'pending' || t.status === 'price_set' || t.status === 'paid');
+    }
+    if (user?.role === 'patient') {
+      return tests.filter(t => t.patient_id === user.id);
+    }
+    if (user?.role === 'doctor') {
+      return tests.filter(t => t.doctor_id === user.id);
+    }
+    return tests;
+  })();
+
+  return (
+    <Layout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-bold">🔬 التحاليل الطبية</h1>
+            <p className="text-gray-500 text-sm">
+              {user?.role === 'doctor' && 'يمكنك إضافة طلبات تحاليل جديدة للمرضى'}
+              {user?.role === 'lab_tech' && 'يمكنك إدارة طلبات التحاليل وإضافة النتائج وتحديد الأسعار ورفع الملفات'}
+              {user?.role === 'patient' && 'عرض طلبات التحاليل الخاصة بك والدفع وتحليل النتائج بالذكاء الاصطناعي'}
+            </p>
+          </div>
+          {user?.role === 'doctor' && (
+            <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
+              <PlusIcon className="w-5 h-5" /> طلب تحليل جديد
+            </button>
+          )}
+          <button onClick={fetchData} className="btn-secondary text-sm flex items-center gap-1">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            تحديث
+          </button>
+        </div>
+
+        {/* إحصائيات سريعة */}
+        {user?.role !== 'patient' && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="card text-center">
+              <div className="text-2xl mb-1">⏳</div>
+              <p className="text-2xl font-bold">{tests.filter(t => t.status === 'pending').length}</p>
+              <p className="text-xs text-gray-500">قيد الانتظار</p>
+            </div>
+            <div className="card text-center">
+              <div className="text-2xl mb-1">💰</div>
+              <p className="text-2xl font-bold">{tests.filter(t => t.status === 'price_set').length}</p>
+              <p className="text-xs text-gray-500">تم التسعير</p>
+            </div>
+            <div className="card text-center">
+              <div className="text-2xl mb-1">✅</div>
+              <p className="text-2xl font-bold">{tests.filter(t => t.status === 'completed').length}</p>
+              <p className="text-xs text-gray-500">مكتملة</p>
+            </div>
+            <div className="card text-center">
+              <div className="text-2xl mb-1">💵</div>
+              <p className="text-2xl font-bold">{tests.filter(t => t.status === 'completed').reduce((sum, t) => sum + (t.amount || 0), 0)} ج.م</p>
+              <p className="text-xs text-gray-500">إجمالي الإيرادات</p>
+            </div>
+          </div>
+        )}
+
+        {/* قائمة طلبات التحاليل */}
+        {filteredTests.length === 0 ? (
+          <div className="card text-center py-12">
+            <BeakerIcon className="w-16 h-16 mx-auto text-gray-300 mb-3" />
+            <p className="text-gray-500">
+              {user?.role === 'patient' && 'لا توجد طلبات تحاليل خاصة بك'}
+              {user?.role === 'doctor' && 'لا توجد طلبات تحاليل قمت بإضافتها'}
+              {user?.role === 'lab_tech' && 'لا توجد طلبات تحاليل حتى الآن'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3">
+            {filteredTests.map(test => (
+              <div key={test.id} className="card hover:shadow-md transition-all">
+                <div className="flex justify-between items-start flex-wrap gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold">
+                        {user?.role === 'patient' ? `الطبيب: ${test.doctor_name}` : `المريض: ${test.patient_name}`}
+                      </p>
+                      {test.lab_tech_name && (
+                        <p className="text-xs text-primary-500">🔬 فني التحاليل: {test.lab_tech_name}</p>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">{test.test_type} - {test.test_name}</p>
+                    {test.description && <p className="text-xs text-gray-500 mt-1">📝 {test.description}</p>}
+                    {test.amount > 0 && (
+                      <p className="text-sm font-semibold text-green-600 mt-1">💰 السعر: {test.amount} ج.م</p>
+                    )}
+                    {test.result && (
+                      <div className="mt-2 p-2 bg-gray-50 rounded-lg">
+                        <p className="text-sm font-medium">📋 النتيجة:</p>
+                        <p className="text-sm text-gray-600">{test.result.substring(0, 100)}...</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    {getStatusBadge(test)}
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    <button 
+                      onClick={() => viewTestDetails(test)} 
+                      className="text-primary-500 hover:text-primary-600 p-1"
+                      title="عرض التفاصيل"
+                    >
+                      <EyeIcon className="w-5 h-5" />
+                    </button>
+                    <button 
+                      onClick={() => getAIAnalysis(test)} 
+                      className="text-purple-500 hover:text-purple-600 p-1"
+                      title="تحليل الذكاء الاصطناعي"
+                    >
+                      <SparklesIcon className="w-5 h-5" />
+                    </button>
+                    {user?.role === 'patient' && test.status === 'price_set' && test.amount > 0 && (
+                      <button 
+                        onClick={() => handlePayment(test)} 
+                        className="bg-green-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-green-600 flex items-center gap-1"
+                      >
+                        <CurrencyDollarIcon className="w-4 h-4" /> دفع {test.amount} ج.م
+                      </button>
+                    )}
+                    {user?.role === 'lab_tech' && test.status === 'pending' && (
+                      <button 
+                        onClick={() => { setSelectedTest(test); setShowPriceModal(true); }} 
+                        className="bg-blue-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-blue-600"
+                      >
+                        تحديد السعر
+                      </button>
+                    )}
+                    {user?.role === 'lab_tech' && (test.status === 'paid' || (test.status === 'price_set' && test.amount > 0)) && (
+                      <button 
+                        onClick={() => { setSelectedTest(test); setShowResultModal(true); setResultText(test.result || ''); }} 
+                        className="bg-green-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-green-600"
+                      >
+                        {test.result ? 'تعديل النتيجة' : 'إضافة نتيجة'}
+                      </button>
+                    )}
+                    {user?.role === 'lab_tech' && (
+                      <button 
+                        onClick={() => handleUploadFiles(test)} 
+                        className="bg-blue-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-blue-600 flex items-center gap-1"
+                      >
+                        <PhotoIcon className="w-4 h-4" /> رفع ملفات
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Modal إضافة طلب تحليل جديد (للدكتور) */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold">طلب تحليل جديد</h3>
+                <button onClick={() => setShowModal(false)} className="text-gray-400"><XMarkIcon className="w-6 h-6" /></button>
+              </div>
+              <form onSubmit={handleSubmit} className="space-y-3">
+                <div>
+                  <label className="label">المريض</label>
+                  <select className="input" required value={requestData.patient_id} onChange={e => setRequestData({...requestData, patient_id: e.target.value})}>
+                    <option value="">اختر المريض</option>
+                    {patients.map(p => <option key={p.id} value={p.id}>{p.username} - {p.email}</option>)}
+                    {patients.length === 0 && <option disabled>⚠️ لا يوجد مرضى</option>}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="label">فني التحاليل</label>
+                  <select className="input" required value={requestData.lab_tech_id} onChange={e => setRequestData({...requestData, lab_tech_id: e.target.value})}>
+                    <option value="">اختر فني التحاليل</option>
+                    {labTechs.map(l => <option key={l.id} value={l.id}>{l.username}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="label">نوع التحليل</label>
+                  <select className="input" required value={requestData.test_type} onChange={e => setRequestData({...requestData, test_type: e.target.value})}>
+                    <option value="">اختر نوع التحليل</option>
+                    {testTypes.map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="label">اسم التحليل</label>
+                  <select className="input" required value={requestData.test_name} onChange={e => setRequestData({...requestData, test_name: e.target.value})}>
+                    <option value="">اختر اسم التحليل</option>
+                    {testNames.map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+
+                <textarea className="input" placeholder="ملاحظات إضافية" rows="3" value={requestData.description} onChange={e => setRequestData({...requestData, description: e.target.value})} />
+
+                <button type="submit" className="btn-primary w-full">إرسال الطلب</button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal تحديد السعر (لفني التحاليل) */}
+        {showPriceModal && selectedTest && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold">تحديد سعر التحليل</h3>
+                <button onClick={() => setShowPriceModal(false)} className="text-gray-400"><XMarkIcon className="w-6 h-6" /></button>
+              </div>
+              <div className="space-y-4">
+                <div className="p-3 bg-gray-50 rounded">
+                  <p className="text-sm text-gray-500">المريض</p>
+                  <p className="font-medium">{selectedTest.patient_name}</p>
+                </div>
+                <div className="p-3 bg-gray-50 rounded">
+                  <p className="text-sm text-gray-500">نوع التحليل</p>
+                  <p className="font-medium">{selectedTest.test_type} - {selectedTest.test_name}</p>
+                </div>
+                <div>
+                  <label className="label">السعر (ج.م)</label>
+                  <input 
+                    type="number" 
+                    className="input w-full" 
+                    placeholder="أدخل السعر"
+                    value={selectedTest.amount || 0} 
+                    onChange={e => setSelectedTest({...selectedTest, amount: parseFloat(e.target.value)})}
+                  />
+                </div>
+                <button onClick={handleSetPrice} className="btn-primary w-full">تحديد السعر</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal إضافة نتيجة التحليل (لفني التحاليل) */}
+        {showResultModal && selectedTest && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold">{selectedTest.result ? 'تعديل نتيجة التحليل' : 'إضافة نتيجة التحليل'}</h3>
+                <button onClick={() => setShowResultModal(false)} className="text-gray-400"><XMarkIcon className="w-6 h-6" /></button>
+              </div>
+              <div className="space-y-3">
+                <div className="p-2 bg-gray-50 rounded">
+                  <p className="text-sm text-gray-500">المريض</p>
+                  <p className="font-medium">{selectedTest.patient_name}</p>
+                </div>
+                <div className="p-2 bg-gray-50 rounded">
+                  <p className="text-sm text-gray-500">نوع التحليل</p>
+                  <p className="font-medium">{selectedTest.test_type} - {selectedTest.test_name}</p>
+                </div>
+                <button onClick={() => getAIAnalysis(selectedTest)} className="btn-secondary text-sm flex items-center gap-2 w-full justify-center">
+                  <SparklesIcon className="w-4 h-4" /> مساعدة الذكاء الاصطناعي
+                </button>
+                <textarea 
+                  className="input w-full" 
+                  rows="6" 
+                  placeholder="أدخل نتيجة التحليل بالتفصيل..."
+                  value={resultText} 
+                  onChange={e => setResultText(e.target.value)} 
+                />
+                <div className="flex gap-2">
+                  <button onClick={handleCompleteTest} className="btn-primary flex-1">حفظ النتيجة</button>
+                  <button onClick={() => setShowResultModal(false)} className="btn-secondary flex-1">إلغاء</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal الدفع (للمريض) */}
+        {showPaymentModal && selectedTest && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold">💰 دفع تكلفة التحليل</h3>
+                <button onClick={() => setShowPaymentModal(false)} className="text-gray-400"><XMarkIcon className="w-6 h-6" /></button>
+              </div>
+              <div className="space-y-4">
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-500">نوع التحليل</p>
+                  <p className="font-medium">{selectedTest.test_type} - {selectedTest.test_name}</p>
+                </div>
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <p className="text-sm text-gray-500">المبلغ المطلوب</p>
+                  <p className="text-2xl font-bold text-green-600">{selectedTest.amount || 0} ج.م</p>
+                </div>
+                <div>
+                  <label className="label">طريقة الدفع</label>
+                  <select className="input w-full" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
+                    <option value="cash">💵 كاش (نقدي)</option>
+                    <option value="card">💳 بطاقة ائتمان</option>
+                    <option value="wallet">📱 محفظة إلكترونية</option>
+                  </select>
+                </div>
+                <button onClick={processPayment} className="btn-primary w-full">تأكيد الدفع</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal عرض تفاصيل التحليل (مع دعم الملفات) */}
+        {showDetailsModal && selectedTest && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white p-4 border-b flex justify-between items-center">
+                <h3 className="text-xl font-semibold">📋 تفاصيل طلب التحليل</h3>
+                <button onClick={() => setShowDetailsModal(false)} className="text-gray-400"><XMarkIcon className="w-6 h-6" /></button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div><p className="text-sm text-gray-500">المريض</p><p className="font-medium">{selectedTest.patient_name}</p></div>
+                  <div><p className="text-sm text-gray-500">الطبيب</p><p className="font-medium">{selectedTest.doctor_name}</p></div>
+                  <div><p className="text-sm text-gray-500">فني التحاليل</p><p className="font-medium">{selectedTest.lab_tech_name || 'لم يتم تعيين بعد'}</p></div>
+                  <div><p className="text-sm text-gray-500">الحالة</p>{getStatusBadge(selectedTest)}</div>
+                </div>
+                {selectedTest.description && (
+                  <div><p className="text-sm text-gray-500">ملاحظات الطبيب</p><p className="bg-gray-50 p-2 rounded">{selectedTest.description}</p></div>
+                )}
+                {selectedTest.amount > 0 && (
+                  <div><p className="text-sm text-gray-500">السعر</p><p className="text-xl font-bold text-green-600">{selectedTest.amount} ج.م</p></div>
+                )}
+                {selectedTest.result && (
+                  <div>
+                    <p className="text-sm text-gray-500">نتيجة التحليل</p>
+                    <div className="bg-blue-50 p-3 rounded-lg whitespace-pre-line">{selectedTest.result}</div>
+                    <button 
+                      onClick={() => getAIAnalysis(selectedTest)} 
+                      className="mt-2 text-purple-600 text-sm flex items-center gap-1 hover:text-purple-700"
+                    >
+                      <SparklesIcon className="w-4 h-4" /> تحليل النتيجة بالذكاء الاصطناعي
+                    </button>
+                  </div>
+                )}
+                {testFiles.length > 0 && (
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">الملفات المرفوعة ({testFiles.length})</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {testFiles.map((file, idx) => (
+                        <div key={idx} className="relative group border rounded-lg overflow-hidden bg-gray-50">
+                          {file.type === 'pdf' ? (
+                            <div className="aspect-square flex flex-col items-center justify-center p-3">
+                              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-2">
+                                <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                              <p className="text-xs text-center text-gray-600 truncate w-full">{file.filename || 'ملف PDF'}</p>
+                              <a 
+                                href={file.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary-500 mt-1 hover:underline"
+                              >
+                                فتح PDF
+                              </a>
+                            </div>
+                          ) : (
+                            <img 
+                              src={file.url} 
+                              alt={`file-${idx}`} 
+                              className="w-full h-32 object-cover"
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal رفع الملفات (لفني التحاليل) */}
+        {showUploadModal && selectedTest && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white p-4 border-b flex justify-between items-center">
+                <h3 className="text-xl font-semibold">📎 رفع ملفات التحليل</h3>
+                <button onClick={() => setShowUploadModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 transition-colors">
+                  <input 
+                    type="file" 
+                    multiple 
+                    accept="image/*,application/pdf" 
+                    onChange={handleFileUpload} 
+                    className="hidden" 
+                    id="file-upload" 
+                  />
+                  <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
+                    <PhotoIcon className="w-12 h-12 text-gray-400 mb-3" />
+                    <span className="text-sm text-gray-600 font-medium">اضغط لرفع الملفات</span>
+                    <span className="text-xs text-gray-400 mt-1">صور (JPEG, PNG, GIF) أو PDF</span>
+                    <span className="text-xs text-gray-400">يمكنك رفع عدة ملفات مرة واحدة</span>
+                  </label>
+                </div>
+
+                {testFiles.length > 0 && (
+                  <div>
+                    <div className="flex justify-between items-center mb-3">
+                      <p className="text-sm font-medium text-gray-700">الملفات المرفوعة ({testFiles.length})</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {testFiles.map((file, idx) => (
+                        <div key={idx} className="relative group border rounded-lg overflow-hidden bg-gray-50">
+                          {file.type === 'pdf' ? (
+                            <div className="aspect-square flex flex-col items-center justify-center p-3">
+                              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mb-1">
+                                <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                              <p className="text-xs text-center text-gray-600 truncate w-full">{file.filename || 'ملف PDF'}</p>
+                            </div>
+                          ) : (
+                            <img 
+                              src={file.url} 
+                              alt={`file-${idx}`} 
+                              className="w-full h-24 object-cover"
+                            />
+                          )}
+                          <button 
+                            onClick={() => deleteFile(file.id)} 
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <XMarkIcon className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <button 
+                  onClick={() => setShowUploadModal(false)} 
+                  className="btn-secondary w-full mt-2"
+                >
+                  إغلاق
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* AI Analysis Modal */}
+        {showAIModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full p-6">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-xl font-semibold flex items-center gap-2">🤖 تحليل الذكاء الاصطناعي</h3>
+                <button onClick={() => setShowAIModal(false)} className="text-gray-400"><XMarkIcon className="w-6 h-6" /></button>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg max-h-96 overflow-y-auto">
+                <p className="text-gray-700 whitespace-pre-line">{aiAnalysis}</p>
+              </div>
+              <button onClick={() => setShowAIModal(false)} className="btn-primary w-full mt-4">إغلاق</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Layout>
+  );
+};
+
+export default LabPage;
